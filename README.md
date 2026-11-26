@@ -2,7 +2,7 @@
 
 A Flutter Web workspace where a user places widgets on a 12-column drag-and-drop grid, links them to shared colour channels, and watches them update live. All market data is generated inside the app: a seeded mock feed, no backend, no network calls.
 
-- **Hosted app:** Link ([add the link here once it is hosted](https://widgetlab-cyan.vercel.app/))
+- **Hosted app:** ([Link](https://widgetlab-cyan.vercel.app/))
 
 Tested with Flutter 3.50.1 (stable) and Dart 3.3 or newer.
 
