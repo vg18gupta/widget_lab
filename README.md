@@ -150,3 +150,27 @@ Every symbol changes on every tick, so each chart and table has new data each ti
 ## Stretch goal: lock layout
 
 A lock button in the top bar stops every layout change: add, drag, resize, remove, duplicate, undo and reset. The hub tiles and the "+ Add" chips are disabled while locked, and the header menu's Duplicate and Remove are greyed out. Channels, symbol picks, full screen and the dev strip still work. The lock is saved with the layout.
+
+## Trade-offs
+
+- **Grid rules.** Layout uses one settle pass: the moved or dropped panel keeps its cell and the others settle around it. This is not a full packing algorithm, so a widget dropped above an empty gap stays where it was dropped, and the gap stays above it.
+- **Full screen remounts the widget.** The card moves in the widget tree, so its console and scroll position reset when toggled. Script text and layout are unaffected.
+- **Narrow layout.** Below 900 px, drag, resize and the hub are off. Widgets stack and can be added with the "+ Add" chips.
+- **Table rows.** There are three symbols, so the table never shows more than three rows. It shows as many rows as fit and summarises the rest as "+N more", but "more rows" is capped by the data.
+- **Chart windows.** The store keeps 15 minutes of ticks per symbol, so 1m, 5m and 15m come from real timestamps. Each window is downsampled to at most 300 points. While the feed is paused or dropped, windows stop sliding.
+- **Seed.** Changing the seed restarts the live random walk. The 15 minutes of history already in memory are not regenerated.
+- **Error containment.** Chart, table and script bodies are guarded, so a failure shows that card's error state with Retry. Anything outside those guards shows the global error tile instead, which contains the failure to its own element but has no card-specific message. Retry re-runs only that card, so a data source that keeps failing will keep failing.
+- **Subscriptions.** Charts subscribe to each symbol. The table subscribes to the shared tick batch, because it reads all three symbols. Both read history from the store.
+- **Chart redraws.** Charts draw on every tick, except while frames run over budget. Then they batch to at most one draw every 500 ms (`batchedChartInterval`). The over-budget check uses a rolling average of frame times with hysteresis. It is not verified in the browser, and it can be switched off with `adaptiveChartBatching`.
+- **Script.** `runScript` is a stub, not an interpreter. Its output does not yet depend on the symbol picked, and it never computes from history.
+- **Editor and console.** The script editor is a plain monospace field, not syntax-highlighted. The console keeps the last 50 lines and is not saved across reloads.
+- **Feed health.** Dropped state is shown per panel. A production version would model feed health as a stream and separate stale data from a dropped connection.
+- **Lock.** It refuses layout changes; it is not a permission model. Its state is shown only by the icon in the top bar.
+- **Saved layouts.** The storage key was renamed, so layouts saved before the rename reset to the default. Layouts saved by earlier versions keep their old sizes until Reset layout is pressed.
+- **Performance evidence.** Rebuild counts are measured by a test. Frame times in the browser are not measured yet; use Flutter DevTools on the hosted app to check the "eight widgets stay smooth" goal.
+- **Packages.** The grid, drag, resize, state and script editor use Flutter primitives, so the interaction model stays explicit. The cost is more code to own and test.
+
+## Where AI was used
+
+- I designed the architecture: the state model, the channel and symbol rules, the layout rules, and the trade-offs above. 
+- AI was used to write the code and the test cases, and to draft some of the documentation. Every change was checked with `flutter analyze`, the full test suite, and a web build before moving on.

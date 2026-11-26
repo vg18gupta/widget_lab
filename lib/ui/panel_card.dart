@@ -10,6 +10,8 @@ import 'package:widget_lab/models/panel.dart';
 import 'package:widget_lab/models/tick.dart';
 import 'package:widget_lab/script/script_runner.dart';
 import 'package:widget_lab/state/workspace.dart';
+import 'package:widget_lab/ui/frame_budget.dart';
+import 'package:widget_lab/ui/widget_error.dart';
 
 /// Build counts per part of the panel, for performance tests. Not used by the UI.
 @visibleForTesting
@@ -59,7 +61,52 @@ class _PanelCardState extends State<PanelCard> {
       );
     }
   }
-  @override void dispose(){_saveTimer?.cancel();_editor.dispose();_editorFocus.dispose();super.dispose();}
+  @override void dispose(){
+    _saveTimer?.cancel();_trailing?.cancel();_redraw.dispose();
+    _editor.dispose();_editorFocus.dispose();super.dispose();
+  }
+
+  // ---- Optional redraw cap (see chartRedrawInterval) ---------------------------
+  /// Bumped when a skipped redraw is due, so the chart draws the latest data.
+  final ValueNotifier<int> _redraw = ValueNotifier<int>(0);
+  Timer? _trailing;
+  bool _dueRedraw=false;
+  DateTime? _lastDraw;
+  Widget? _lastChart;
+  String? _lastKey;
+
+  /// Draws the chart, or reuses the last drawing if the interval since the last draw has
+  /// not passed. Reusing the same widget instance lets Flutter skip the rebuild.
+  /// The redraw cap in effect now: the user's setting, or the batching interval while
+  /// frames are over budget, whichever is longer.
+  Duration _effectiveInterval() {
+    if (adaptiveChartBatching && FrameBudget.instance.overBudget &&
+        batchedChartInterval > chartRedrawInterval) {
+      return batchedChartInterval;
+    }
+    return chartRedrawInterval;
+  }
+
+  Widget _throttledChartBody(String symbol) {
+    final key='$symbol|${widget.panel.range}';
+    final interval=_effectiveInterval();
+    final now=DateTime.now();
+    if(_dueRedraw||interval==Duration.zero||_lastChart==null||_lastKey!=key||_lastDraw==null||
+        now.difference(_lastDraw!)>=interval) {
+      _dueRedraw=false;
+      _trailing?.cancel();
+      _trailing=null;
+      _lastDraw=now;
+      _lastKey=key;
+      return _lastChart=_chartBody(symbol);
+    }
+    _trailing??=Timer(interval-now.difference(_lastDraw!),(){
+      _trailing=null;
+      _dueRedraw=true; // draw the latest data even if the wall clock says it's too soon
+      _redraw.value++;
+    });
+    return _lastChart!;
+  }
   @override Widget build(BuildContext context) {
     _count('card');
     final p=widget.panel;
@@ -88,11 +135,12 @@ class _PanelCardState extends State<PanelCard> {
                   PopupMenuItem(value:'duplicate',enabled:!widget.workspace.locked,child:const Text('Duplicate')),
                   PopupMenuItem(value:'remove',enabled:!widget.workspace.locked,child:const Text('Remove'))]),
               ]))),
-          Expanded(child:p.channel>=0
+          // Own paint layer: a chart repainting on a tick doesn't repaint the header or other cards.
+          Expanded(child:RepaintBoundary(child:p.channel>=0
             ? ValueListenableBuilder<String>(
                 valueListenable:widget.workspace.channelSymbols[p.channel],
                 builder:(context,symbol,_) => _renderPanel(symbol))
-            : _renderPanel(p.symbol)),
+            : _renderPanel(p.symbol))),
           if(error!=null) Padding(padding:const EdgeInsets.all(4),child:Text(error!,style:const TextStyle(color:Palette.error,fontSize:10))),
         ]),
         if(widget.interactive) ..._resizeHandles(p),
@@ -135,7 +183,7 @@ class _PanelCardState extends State<PanelCard> {
     try {
       return build();
     } catch (e) {
-      return _state('Widget error: $e', Icons.error_outline);
+      return WidgetErrorTile(message: '$e', onRetry: () => setState(() {}));
     }
   }
 
@@ -167,8 +215,9 @@ class _PanelCardState extends State<PanelCard> {
               minimumSize:Size.zero,tapTargetSize:MaterialTapTargetSize.shrinkWrap),
             onPressed:()=>setState(()=>widget.panel.range=r),
             child:Text(r,style:TextStyle(fontSize:11,color:widget.panel.range==r?Palette.accent:Palette.textMuted))) ]),
-        Expanded(child:ValueListenableBuilder<Tick>(valueListenable:widget.market.listen(symbol),
-          builder:(context,tick,_)=>_guard(()=>_chartBody(symbol)))),
+        Expanded(child:AnimatedBuilder(
+          animation:Listenable.merge([widget.market.listen(symbol),_redraw]),
+          builder:(context,_)=>_guard(()=>_throttledChartBody(symbol)))),
       ]));
   }
   Widget _chartBody(String symbol) {
@@ -183,6 +232,7 @@ class _PanelCardState extends State<PanelCard> {
       minX:0,maxX:span,
       minY:ys.reduce(min)-1,maxY:ys.reduce(max)+1,
       gridData:const FlGridData(show:true,drawVerticalLine:false),
+      lineTouchData:const LineTouchData(enabled:false), // no hover or tap work on live data
       titlesData:FlTitlesData(
         topTitles:AxisTitles(sideTitles:SideTitles(showTitles:false)),
         leftTitles:AxisTitles(sideTitles:SideTitles(showTitles:false)),
@@ -193,7 +243,7 @@ class _PanelCardState extends State<PanelCard> {
               style:const TextStyle(fontSize:9,color:Palette.textFaint))))),
       ),
       borderData:FlBorderData(show:false),
-      lineBarsData:[LineChartBarData(spots:spots,isCurved:true,barWidth:2,dotData:const FlDotData(show:false),
+      lineBarsData:[LineChartBarData(spots:spots,isCurved:false,barWidth:2,dotData:const FlDotData(show:false),
         color:Palette.accent,belowBarData:BarAreaData(show:true,color:Palette.accentFill))],
     ), duration:Duration.zero); // no tween per tick: the new points appear immediately
   }

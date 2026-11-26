@@ -46,9 +46,23 @@ class MarketStore {
     _ => const Duration(minutes: 15),
   };
 
+  // Every chart on a symbol and range needs the same window until the next tick, so each
+  // window is computed once per tick and shared. Windows are read-only; callers must not
+  // modify the list.
+  final Map<String, List<Tick>> _windows = {};
+  int _windowsTick = -1;
+
   /// Ticks from the last [range] window, downsampled to at most [maxChartPoints].
   /// The newest tick is always included. Empty if nothing arrived inside the window.
   List<Tick> history(String s, String range) {
+    if (_windowsTick != batch.value) {
+      _windows.clear();
+      _windowsTick = batch.value;
+    }
+    return _windows.putIfAbsent('$s|$range', () => _window(s, range));
+  }
+
+  List<Tick> _window(String s, String range) {
     final all = _history[s]!;
     final from = _firstAtOrAfter(all, DateTime.now().subtract(rangeDuration(range)));
     final window = all.sublist(from);
