@@ -1,40 +1,32 @@
-import 'dart:async';
-import 'dart:math';
 import 'package:flutter/foundation.dart';
-import 'package:widget_lab/models/constants.dart';
-import 'package:widget_lab/models/tick.dart';
+import 'package:widget_lab/config/constants.dart';
+import 'package:widget_lab/data/mock_feed.dart';
+import 'package:widget_lab/domain/tick.dart';
 
+/// Keeps the market's history and latest prices. Prices come from the [MockFeed]; widgets
+/// read them here. The store also keeps the shared windows of history that charts draw.
 class MarketStore {
-  /// Longest chart window. Older ticks are dropped.
+  /// Longest window kept. Older ticks are dropped.
   static const retention = Duration(minutes: 15);
   /// Charts and tables are downsampled to at most this many points.
   static const maxChartPoints = 300;
-  /// Seeded history: one tick per second across the full retention window.
-  static const _seedSeconds = 15 * 60;
 
-  MarketStore({int seed = 42}) : _random = Random(seed), seed = seed {
-    final now = DateTime.now();
+  MarketStore({int seed = 42}) {
+    feed = MockFeed(seed: seed, onTick: _ingest);
+    final seeded = feed.seedHistory(DateTime.now());
     for (final s in symbols) {
-      final base = 80 + symbols.indexOf(s) * 35.0;
-      var value = base;
-      final history = <Tick>[];
-      for (var i = 0; i < _seedSeconds; i++) {
-        value += (_random.nextDouble() - .5) * 1.2;
-        history.add(Tick(now.subtract(Duration(seconds: _seedSeconds - i)), value));
-      }
-      _history[s] = history;
-      _latest[s] = ValueNotifier<Tick>(history.last);
+      _history[s] = seeded[s]!;
+      _latest[s] = ValueNotifier<Tick>(seeded[s]!.last);
     }
   }
-  Random _random;
-  Timer? _timer;
-  final Map<String,List<Tick>> _history = {};
-  final Map<String,ValueNotifier<Tick>> _latest = {};
+
+  late final MockFeed feed;
+  final Map<String, List<Tick>> _history = {};
+  final Map<String, ValueNotifier<Tick>> _latest = {};
   /// Fires once per feed tick, after every symbol has updated. Widgets that need every
   /// symbol subscribe here rather than to each symbol, so they rebuild once per tick.
   final ValueNotifier<int> batch = ValueNotifier<int>(0);
-  bool paused = false, dropped = false;
-  int intervalMs = 150, seed = 42;
+
   ValueListenable<Tick> listen(String s) => _latest[s]!;
   Tick latest(String s) => _latest[s]!.value;
   /// False until the symbol has at least one tick, so widgets can show a loading state.
@@ -86,34 +78,35 @@ class MarketStore {
     return lo;
   }
 
-  void start() {
-    _timer?.cancel();
-    _timer = Timer.periodic(Duration(milliseconds: intervalMs), (_) {
-      if (paused || dropped) return;
-      final now = DateTime.now();
-      final cutoff = now.subtract(retention);
-      for (final s in symbols) {
-        final old = latest(s);
-        final next = old.value + (_random.nextDouble() - .49) * 1.1;
-        final tick = Tick(now, next);
-        final history = _history[s]!..add(tick);
-        while (history.length > 1 && history.first.time.isBefore(cutoff)) {
-          history.removeAt(0);
-        }
-        _latest[s]!.value = tick;
+  /// Receives one feed tick: appends it to each symbol's history, drops what is older than
+  /// the retention window, updates the latest price, and fires [batch].
+  void _ingest(DateTime now, Map<String, double> prices) {
+    final cutoff = now.subtract(retention);
+    for (final s in symbols) {
+      final tick = Tick(now, prices[s]!);
+      final history = _history[s]!..add(tick);
+      while (history.length > 1 && history.first.time.isBefore(cutoff)) {
+        history.removeAt(0);
       }
-      batch.value++;
-    });
-  }
-  void configure({bool? pause, bool? drop, int? rate, int? newSeed}) {
-    if (pause != null) paused = pause;
-    if (drop != null) dropped = drop;
-    if (rate != null) intervalMs = rate;
-    if (newSeed != null) {
-      seed = newSeed;
-      _random = Random(seed);
+      _latest[s]!.value = tick;
     }
-    start();
+    batch.value++;
   }
-  void dispose() { _timer?.cancel(); batch.dispose(); for (final n in _latest.values) { n.dispose(); } }
+
+  // Feed controls, passed through so the dev strip has one place to call.
+  bool get paused => feed.paused;
+  bool get dropped => feed.dropped;
+  int get intervalMs => feed.intervalMs;
+  int get seed => feed.seed;
+  void start() => feed.start();
+  void configure({bool? pause, bool? drop, int? rate, int? newSeed}) =>
+    feed.configure(pause: pause, drop: drop, rate: rate, newSeed: newSeed);
+
+  void dispose() {
+    feed.dispose();
+    batch.dispose();
+    for (final n in _latest.values) {
+      n.dispose();
+    }
+  }
 }

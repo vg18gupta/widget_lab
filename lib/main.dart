@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:widget_lab/app.dart';
-import 'package:widget_lab/ui/widget_error.dart';
+import 'package:widget_lab/presentation/widget_error.dart';
 
 void main() {
   // Any widget that fails to build or paint shows this tile in its own place. The rest of

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:widget_lab/market/market_store.dart';
+import 'package:widget_lab/store/market_store.dart';
 
 void main() {
   test('chart windows are capped to maxChartPoints', () {

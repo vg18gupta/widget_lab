@@ -1,6 +1,6 @@
 import 'package:widget_lab/theme/palette.dart';
 import 'package:flutter/material.dart';
-import 'package:widget_lab/models/constants.dart';
+import 'package:widget_lab/config/constants.dart';
 
 class GridPainter extends CustomPainter {
   GridPainter(this.cellW); final double cellW;

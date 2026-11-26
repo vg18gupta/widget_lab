@@ -1,11 +1,12 @@
+import 'package:widget_lab/controller/app_controllers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:widget_lab/market/market_store.dart';
-import 'package:widget_lab/models/constants.dart';
-import 'package:widget_lab/state/workspace.dart';
-import 'package:widget_lab/ui/frame_budget.dart';
-import 'package:widget_lab/ui/panel_card.dart';
+import 'package:widget_lab/store/market_store.dart';
+import 'package:widget_lab/config/constants.dart';
+import 'package:widget_lab/store/workspace_store.dart';
+import 'package:widget_lab/data/frame_budget.dart';
+import 'package:widget_lab/presentation/panel_card.dart';
 
 void _frames(FrameBudget b, int count, int ms) {
   for (var i = 0; i < count; i++) {
@@ -49,10 +50,10 @@ void main() {
     addTearDown(() => FrameBudget.instance.reset());
     final market = MarketStore();
     addTearDown(market.dispose);
-    final ws = Workspace(market)..reset(notify: false);
+    final ws = AppControllers(market: market)..layout.reset(notify: false);
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: Center(
       child: SizedBox(width: 600, height: 420,
-        child: PanelCard(panel: ws.panels.first, workspace: ws, market: market,
+        child: PanelCard(panel: ws.store.panels.first, app: ws,
           cellW: 50, interactive: true))))));
     market.start();
     await tester.pump();

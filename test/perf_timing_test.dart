@@ -1,10 +1,11 @@
+import 'package:widget_lab/controller/app_controllers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:widget_lab/market/market_store.dart';
-import 'package:widget_lab/models/panel.dart';
-import 'package:widget_lab/state/workspace.dart';
-import 'package:widget_lab/ui/lab_home.dart';
+import 'package:widget_lab/store/market_store.dart';
+import 'package:widget_lab/domain/panel.dart';
+import 'package:widget_lab/store/workspace_store.dart';
+import 'package:widget_lab/presentation/lab_home.dart';
 
 /// Measures the CPU time spent per frame with eight widgets, with the feed running
 /// and with it paused. Debug-mode numbers are inflated; compare them relative to each other.
@@ -17,12 +18,12 @@ void main() {
 
     final market = MarketStore();
     addTearDown(market.dispose);
-    final ws = Workspace(market);
-    await tester.runAsync(() => ws.load());
+    final ws = AppControllers(market: market);
+    await tester.runAsync(() => ws.layout.load());
     for (final k in [WidgetKind.chart, WidgetKind.table, WidgetKind.chart, WidgetKind.script, WidgetKind.chart]) {
-      ws.add(k);
+      ws.layout.add(k);
     }
-    await tester.pumpWidget(MaterialApp(home: LabHome(workspace: ws, market: market)));
+    await tester.pumpWidget(MaterialApp(home: LabHome(app: ws)));
     await tester.pump();
     market.start();
     await tester.pump();

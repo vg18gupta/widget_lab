@@ -1,45 +1,47 @@
+import 'package:widget_lab/controller/app_controllers.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:widget_lab/market/market_store.dart';
-import 'package:widget_lab/models/constants.dart';
-import 'package:widget_lab/models/panel.dart';
-import 'package:widget_lab/state/workspace.dart';
+import 'package:widget_lab/store/market_store.dart';
+import 'package:widget_lab/config/constants.dart';
+import 'package:widget_lab/domain/panel.dart';
+import 'package:widget_lab/domain/grid_layout.dart';
+import 'package:widget_lab/store/workspace_store.dart';
 
 bool _overlap(Panel a, Panel b) =>
   a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
-void _expectNoOverlaps(Workspace ws) {
-  for (var i = 0; i < ws.panels.length; i++) {
-    for (var j = i + 1; j < ws.panels.length; j++) {
-      expect(_overlap(ws.panels[i], ws.panels[j]), isFalse,
-        reason: '${ws.panels[i].id} overlaps ${ws.panels[j].id}');
+void _expectNoOverlaps(AppControllers ws) {
+  for (var i = 0; i < ws.store.panels.length; i++) {
+    for (var j = i + 1; j < ws.store.panels.length; j++) {
+      expect(_overlap(ws.store.panels[i], ws.store.panels[j]), isFalse,
+        reason: '${ws.store.panels[i].id} overlaps ${ws.store.panels[j].id}');
     }
   }
 }
 
-Panel _byId(Workspace ws, String id) => ws.panels.firstWhere((p) => p.id == id);
+Panel _byId(AppControllers ws, String id) => ws.store.panels.firstWhere((p) => p.id == id);
 
 void main() {
-  late Workspace ws;
+  late AppControllers ws;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    ws = Workspace(MarketStore());
-    await ws.load();
+    ws = AppControllers(market: MarketStore());
+    await ws.layout.load();
   });
 
   test('removing a widget closes the gap it leaves', () {
-    ws.addAt(WidgetKind.table, 0, 20); // far below the defaults, leaving a gap
-    final table = ws.panels.last;
+    ws.layout.addAt(WidgetKind.table, 0, 20); // far below the defaults, leaving a gap
+    final table = ws.store.panels.last;
     expect(table.y, 20);
-    ws.remove(_byId(ws, 'default-script')); // script occupied y7..13 at x0
+    ws.layout.remove(_byId(ws, 'default-script')); // script occupied y7..13 at x0
     expect(table.y, 7, reason: 'the table should rise into the freed space');
     _expectNoOverlaps(ws);
   });
 
   test('a dropped widget lands exactly on its cell and others settle around it', () {
-    ws.addAt(WidgetKind.chart, 0, 0);
-    final dropped = ws.panels.last;
+    ws.layout.addAt(WidgetKind.chart, 0, 0);
+    final dropped = ws.store.panels.last;
     expect(dropped.x, 0);
     expect(dropped.y, 0);
     expect(dropped.w, WidgetKind.chart.defaultW);
@@ -47,58 +49,56 @@ void main() {
   });
 
   test('a dropped widget is clamped inside the grid', () {
-    ws.addAt(WidgetKind.table, 11, 0);
-    final dropped = ws.panels.last;
+    ws.layout.addAt(WidgetKind.table, 11, 0);
+    final dropped = ws.store.panels.last;
     expect(dropped.x + dropped.w, lessThanOrEqualTo(12));
   });
 
   test('full screen toggles on and off and only one panel is full screen', () {
     final chart = _byId(ws, 'default-chart');
     final table = _byId(ws, 'default-table');
-    expect(ws.fullscreenPanel, isNull);
-    ws.toggleFullscreen(chart);
-    expect(ws.fullscreenPanel, same(chart));
-    ws.toggleFullscreen(table);
-    expect(ws.fullscreenPanel, same(table));
+    expect(ws.store.fullscreenPanel, isNull);
+    ws.layout.toggleFullscreen(chart);
+    expect(ws.store.fullscreenPanel, same(chart));
+    ws.layout.toggleFullscreen(table);
+    expect(ws.store.fullscreenPanel, same(table));
     expect(chart.fullscreen, isFalse);
-    ws.toggleFullscreen(table);
-    expect(ws.fullscreenPanel, isNull);
+    ws.layout.toggleFullscreen(table);
+    expect(ws.store.fullscreenPanel, isNull);
   });
 
   test('each widget kind stops at its own minimum size', () {
-    const cellW = 60.0;
     final table = _byId(ws, 'default-table');
-    ws.beginGesture(table);
-    ws.resizeBy(table, {ResizeSide.right, ResizeSide.bottom}, -5000, -5000, cellW);
+    ws.layout.beginGesture(table);
+    ws.layout.resizeBy(table, {ResizeSide.right, ResizeSide.bottom}, -50, -50);
     expect(table.w, WidgetKind.table.minW);
     expect(table.h, WidgetKind.table.minH);
-    ws.endGesture();
+    ws.layout.endGesture();
 
     final script = _byId(ws, 'default-script');
-    ws.beginGesture(script);
-    ws.resizeBy(script, {ResizeSide.right, ResizeSide.bottom}, -5000, -5000, cellW);
+    ws.layout.beginGesture(script);
+    ws.layout.resizeBy(script, {ResizeSide.right, ResizeSide.bottom}, -50, -50);
     expect(script.w, WidgetKind.script.minW);
     expect(script.h, WidgetKind.script.minH);
-    ws.endGesture();
+    ws.layout.endGesture();
   });
 
   test('a left-edge resize keeps the right edge fixed', () {
-    const cellW = 60.0;
     final chart = _byId(ws, 'default-chart'); // x0, right edge at chart.w
     final rightEdge = chart.x + chart.w;
-    ws.beginGesture(chart);
-    ws.resizeBy(chart, {ResizeSide.left}, 60, 0, cellW); // one cell in
+    ws.layout.beginGesture(chart);
+    ws.layout.resizeBy(chart, {ResizeSide.left}, 1, 0); // one cell in
     expect(chart.x, 1);
     expect(chart.x + chart.w, rightEdge);
-    ws.endGesture();
+    ws.layout.endGesture();
   });
 
   test('a top-edge resize keeps the bottom edge fixed', () {
     final chart = _byId(ws, 'default-chart'); // y0 h7, bottom edge at 7
-    ws.beginGesture(chart);
-    ws.resizeBy(chart, {ResizeSide.top}, 0, rowHeight, 60); // one row down
+    ws.layout.beginGesture(chart);
+    ws.layout.resizeBy(chart, {ResizeSide.top}, 0, 1); // one row down
     expect(chart.y, 1);
     expect(chart.y + chart.h, 7);
-    ws.endGesture();
+    ws.layout.endGesture();
   });
 }

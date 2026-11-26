@@ -1,5 +1,3 @@
-import 'package:widget_lab/market/market_store.dart';
-
 /// A tunable setting declared in a script, e.g. `param threshold: 10 [0..100]`.
 class ScriptParam {
   const ScriptParam(this.name, this.defaultValue, this.min, this.max);
@@ -24,13 +22,17 @@ List<ScriptParam> parseParams(String code) {
 /// Deliberately constrained stub: no eval and no arbitrary code execution.
 /// Recognises a `table` keyword, or a `label:` / `value:` stat spec where `value`
 /// is a number or the name of a declared param.
-Map<String, dynamic> runScript(String code, MarketStore market, Map<String, double> params) {
+///
+/// [latest] returns the current price for a symbol. Taking a function rather than the
+/// market keeps this file free of state and easy to test.
+Map<String, dynamic> runScript(String code, double Function(String symbol) latest,
+    Map<String, double> params) {
   if (code.trim().isEmpty) throw const FormatException('Script is empty');
   if (code.toLowerCase().contains('table')) {
     return {'type':'table','title':'Generated values','rows':[
-      {'symbol':'AAA','value':market.latest('AAA').value},
-      {'symbol':'BBB','value':market.latest('BBB').value},
-      {'symbol':'CCC','value':market.latest('CCC').value},
+      {'symbol':'AAA','value':latest('AAA')},
+      {'symbol':'BBB','value':latest('BBB')},
+      {'symbol':'CCC','value':latest('CCC')},
     ]};
   }
   final labelMatch = RegExp(r'label\s*:\s*"([^"]+)"').firstMatch(code);

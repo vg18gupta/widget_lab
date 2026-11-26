@@ -1,11 +1,12 @@
+import 'package:widget_lab/controller/app_controllers.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:widget_lab/app.dart';
-import 'package:widget_lab/market/market_store.dart';
-import 'package:widget_lab/state/workspace.dart';
-import 'package:widget_lab/ui/lab_home.dart';
+import 'package:widget_lab/store/market_store.dart';
+import 'package:widget_lab/store/workspace_store.dart';
+import 'package:widget_lab/presentation/lab_home.dart';
 
 void main() {
   testWidgets('every edge and corner resizes a widget on the full canvas with a mouse', (tester) async {
@@ -14,12 +15,12 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     SharedPreferences.setMockInitialValues({});
     final market = MarketStore();
-    final ws = Workspace(market);
-    await tester.runAsync(() => ws.load());
-    await tester.pumpWidget(MaterialApp(home: LabHome(workspace: ws, market: market)));
+    final ws = AppControllers(market: market);
+    await tester.runAsync(() => ws.layout.load());
+    await tester.pumpWidget(MaterialApp(home: LabHome(app: ws)));
     await tester.pump();
 
-    final chart = ws.panels.firstWhere((p) => p.id == 'default-chart');
+    final chart = ws.store.panels.firstWhere((p) => p.id == 'default-chart');
     final finder = find.byKey(const ValueKey('default-chart'));
     Future<void> mouseDrag(Offset from, Offset by) async {
       final g = await tester.startGesture(from, kind: PointerDeviceKind.mouse);

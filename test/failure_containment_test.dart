@@ -1,11 +1,12 @@
+import 'package:widget_lab/controller/app_controllers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:widget_lab/market/market_store.dart';
-import 'package:widget_lab/models/tick.dart';
-import 'package:widget_lab/state/workspace.dart';
-import 'package:widget_lab/ui/panel_card.dart';
-import 'package:widget_lab/ui/widget_error.dart';
+import 'package:widget_lab/store/market_store.dart';
+import 'package:widget_lab/domain/tick.dart';
+import 'package:widget_lab/store/workspace_store.dart';
+import 'package:widget_lab/presentation/panel_card.dart';
+import 'package:widget_lab/presentation/widget_error.dart';
 
 /// A market whose history can't be read, to simulate a failing data source.
 class _BrokenMarket extends MarketStore {
@@ -20,15 +21,18 @@ void main() {
     addTearDown(good.dispose);
     final broken = _BrokenMarket();
     addTearDown(broken.dispose);
-    final ws = Workspace(good)..reset(notify: false);
-    final chart = ws.panels[0];
-    final table = ws.panels[1];
+    // Each card gets its own app: the chart reads the broken market, the table the good one.
+    final brokenApp = AppControllers(market: broken);
+    final goodApp = AppControllers(market: good);
+    goodApp.layout.reset(notify: false);
+    final chart = goodApp.store.panels[0];
+    final table = goodApp.store.panels[1];
 
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: Row(children: [
-      SizedBox(width: 400, height: 400, child: PanelCard(panel: chart, workspace: ws,
-        market: broken, cellW: 50, interactive: false)),
-      SizedBox(width: 400, height: 400, child: PanelCard(panel: table, workspace: ws,
-        market: good, cellW: 50, interactive: false)),
+      SizedBox(width: 400, height: 400, child: PanelCard(panel: chart, app: brokenApp,
+        cellW: 50, interactive: false)),
+      SizedBox(width: 400, height: 400, child: PanelCard(panel: table, app: goodApp,
+        cellW: 50, interactive: false)),
     ]))));
     await tester.pump();
 

@@ -1,10 +1,11 @@
+import 'package:widget_lab/controller/app_controllers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:widget_lab/market/market_store.dart';
-import 'package:widget_lab/models/panel.dart';
-import 'package:widget_lab/state/workspace.dart';
-import 'package:widget_lab/ui/lab_home.dart';
+import 'package:widget_lab/store/market_store.dart';
+import 'package:widget_lab/domain/panel.dart';
+import 'package:widget_lab/store/workspace_store.dart';
+import 'package:widget_lab/presentation/lab_home.dart';
 
 /// Frame cost with N widgets, feed running vs paused. Debug-mode test numbers:
 /// compare before and after changes on the same machine, not against the browser.
@@ -16,13 +17,13 @@ Future<void> _measure(WidgetTester tester, int extra) async {
 
   final market = MarketStore();
   addTearDown(market.dispose);
-  final ws = Workspace(market);
-  await tester.runAsync(() => ws.load());
+  final ws = AppControllers(market: market);
+  await tester.runAsync(() => ws.layout.load());
   const cycle = [WidgetKind.chart, WidgetKind.table, WidgetKind.chart, WidgetKind.script, WidgetKind.chart];
   for (var i = 0; i < extra; i++) {
-    ws.add(cycle[i % cycle.length]);
+    ws.layout.add(cycle[i % cycle.length]);
   }
-  await tester.pumpWidget(MaterialApp(home: LabHome(workspace: ws, market: market)));
+  await tester.pumpWidget(MaterialApp(home: LabHome(app: ws)));
   await tester.pump();
   market.start();
   await tester.pump();
@@ -43,7 +44,7 @@ Future<void> _measure(WidgetTester tester, int extra) async {
   await tester.pump();
   final (pausedMs, _) = await measure(300);
   // ignore: avoid_print
-  print('${ws.panels.length} widgets: running ${runMs.toStringAsFixed(2)} ms/frame '
+  print('${ws.store.panels.length} widgets: running ${runMs.toStringAsFixed(2)} ms/frame '
       '(${ticks} ticks in 300 frames), paused ${pausedMs.toStringAsFixed(2)} ms/frame');
   expect(ticks, greaterThan(5));
 }

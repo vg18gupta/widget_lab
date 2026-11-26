@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:widget_lab/market/market_store.dart';
-import 'package:widget_lab/script/script_runner.dart';
+import 'package:widget_lab/domain/script_runner.dart';
 
 void main() {
   test('parseParams reads a declaration', () {
@@ -18,29 +17,29 @@ void main() {
 
   test('a value can reference a declared param', () {
     final out = runScript('param t: 10 [0..100]\nlabel: "Spread"\nvalue: t',
-      MarketStore(), {'t': 42});
+      (_) => 0.0, {'t': 42});
     expect(out['type'], 'stat');
     expect(out['label'], 'Spread');
     expect(out['value'], 42.0);
   });
 
   test('a numeric value literal is used as given', () {
-    final out = runScript('label: "Spread"\nvalue: 12.4', MarketStore(), {});
+    final out = runScript('label: "Spread"\nvalue: 12.4', (_) => 0.0, {});
     expect(out['value'], 12.4);
   });
 
   test('an unknown name in value throws a FormatException', () {
-    expect(() => runScript('value: nope', MarketStore(), {}),
+    expect(() => runScript('value: nope', (_) => 0.0, {}),
       throwsA(isA<FormatException>()));
   });
 
   test('a script without a value field throws a FormatException', () {
-    expect(() => runScript('label: "x"', MarketStore(), {}),
+    expect(() => runScript('label: "x"', (_) => 0.0, {}),
       throwsA(isA<FormatException>()));
   });
 
   test('an empty script throws a FormatException', () {
-    expect(() => runScript('   ', MarketStore(), {}),
+    expect(() => runScript('   ', (_) => 0.0, {}),
       throwsA(isA<FormatException>()));
   });
 }
