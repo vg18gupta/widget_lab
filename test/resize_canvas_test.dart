@@ -2,10 +2,10 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tradl_widget_lab/app.dart';
-import 'package:tradl_widget_lab/market/market_store.dart';
-import 'package:tradl_widget_lab/state/workspace.dart';
-import 'package:tradl_widget_lab/ui/lab_home.dart';
+import 'package:widget_lab/app.dart';
+import 'package:widget_lab/market/market_store.dart';
+import 'package:widget_lab/state/workspace.dart';
+import 'package:widget_lab/ui/lab_home.dart';
 
 void main() {
   testWidgets('every edge and corner resizes a widget on the full canvas with a mouse', (tester) async {

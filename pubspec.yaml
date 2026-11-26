@@ -1,5 +1,5 @@
-name: tradl_widget_lab
-description: Tradl Widget Lab take-home implementation
+name: widget_lab
+description: Widget Lab take-home implementation
 publish_to: none
 version: 1.0.0+1
 environment:

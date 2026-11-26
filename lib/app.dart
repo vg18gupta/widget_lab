@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:tradl_widget_lab/market/market_store.dart';
-import 'package:tradl_widget_lab/state/workspace.dart';
-import 'package:tradl_widget_lab/ui/lab_home.dart';
+import 'package:widget_lab/market/market_store.dart';
+import 'package:widget_lab/state/workspace.dart';
+import 'package:widget_lab/theme/palette.dart';
+import 'package:widget_lab/ui/lab_home.dart';
 
 class WidgetLabApp extends StatefulWidget {
   const WidgetLabApp({super.key});
@@ -17,9 +18,7 @@ class _WidgetLabAppState extends State<WidgetLabApp> {
   }
   @override void dispose() { workspace.dispose(); market.dispose(); super.dispose(); }
   @override Widget build(BuildContext context) => MaterialApp(
-    debugShowCheckedModeBanner:false, title:'Tradl Widget Lab',
-    theme:ThemeData(useMaterial3:true,brightness:Brightness.dark,
-      scaffoldBackgroundColor:const Color(0xff0b1020),
-      colorScheme:ColorScheme.fromSeed(seedColor:const Color(0xff8b7cff),brightness:Brightness.dark)),
+    debugShowCheckedModeBanner:false, title:'Widget Lab',
+    theme:buildAppTheme(),
     home:LabHome(workspace:workspace,market:market));
 }

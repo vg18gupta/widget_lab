@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tradl_widget_lab/market/market_store.dart';
-import 'package:tradl_widget_lab/models/panel.dart';
-import 'package:tradl_widget_lab/state/workspace.dart';
+import 'package:widget_lab/market/market_store.dart';
+import 'package:widget_lab/models/panel.dart';
+import 'package:widget_lab/state/workspace.dart';
 
 bool _overlap(Panel a, Panel b) =>
   a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;

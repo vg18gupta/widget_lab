@@ -1,12 +1,13 @@
+import 'package:widget_lab/theme/palette.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:tradl_widget_lab/market/market_store.dart';
-import 'package:tradl_widget_lab/models/constants.dart';
-import 'package:tradl_widget_lab/models/panel.dart';
-import 'package:tradl_widget_lab/state/workspace.dart';
-import 'package:tradl_widget_lab/ui/grid_painter.dart';
-import 'package:tradl_widget_lab/ui/panel_card.dart';
+import 'package:widget_lab/market/market_store.dart';
+import 'package:widget_lab/models/constants.dart';
+import 'package:widget_lab/models/panel.dart';
+import 'package:widget_lab/state/workspace.dart';
+import 'package:widget_lab/ui/grid_painter.dart';
+import 'package:widget_lab/ui/panel_card.dart';
 
 class LabHome extends StatefulWidget {
   const LabHome({super.key,required this.workspace,required this.market});
@@ -52,11 +53,10 @@ class _LabHomeState extends State<LabHome> {
         _devPanel(),
       ])))));
   Widget _topBar()=>Container(height:58,padding:const EdgeInsets.symmetric(horizontal:18),
-    decoration:const BoxDecoration(border:Border(bottom:BorderSide(color:Color(0xff263149)))),
+    decoration:const BoxDecoration(border:Border(bottom:BorderSide(color:Palette.border))),
     child:Row(children:[
-      const Icon(Icons.dashboard_customize,color:Color(0xffa99cff)),const SizedBox(width:10),
-      const Text('TRADL',style:TextStyle(fontWeight:FontWeight.w900,letterSpacing:2)),
-      const SizedBox(width:8),const Text('WIDGET LAB',style:TextStyle(color:Colors.white54,fontSize:12)),
+      const Icon(Icons.dashboard_customize,color:Palette.accent),const SizedBox(width:10),
+      const SizedBox(width:8),const Text('WIDGET LAB',style:TextStyle(color:Palette.textMuted,fontSize:12)),
       const Spacer(),
       AnimatedBuilder(animation:widget.workspace,builder:(_,__)=>IconButton(
         tooltip:widget.workspace.locked?'Unlock layout':'Lock layout',
@@ -65,9 +65,9 @@ class _LabHomeState extends State<LabHome> {
       IconButton(tooltip:'Undo (Ctrl+Z)',onPressed:widget.workspace.undo,icon:const Icon(Icons.undo)),
       TextButton(onPressed:()=>setState(()=>widget.workspace.reset()),child:const Text('Reset layout')),
     ]));
-  Widget _hub()=>Container(color:const Color(0xff10182a),padding:const EdgeInsets.all(14),
+  Widget _hub()=>Container(color:Palette.surface,padding:const EdgeInsets.all(14),
     child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      const Text('WIDGET HUB',style:TextStyle(fontSize:11,color:Colors.white54,fontWeight:FontWeight.bold)),
+      const Text('WIDGET HUB',style:TextStyle(fontSize:11,color:Palette.textMuted,fontWeight:FontWeight.bold)),
       const SizedBox(height:14),
       AnimatedBuilder(animation:widget.workspace,builder:(_,__)=>Column(mainAxisSize:MainAxisSize.min,children:[
         for(final k in WidgetKind.values) Padding(padding:const EdgeInsets.only(bottom:9),
@@ -75,10 +75,10 @@ class _LabHomeState extends State<LabHome> {
             feedback:Material(color:Colors.transparent,child:_hubTile(k)),
             child:_hubTile(k))),
       ])),
-      const Spacer(),const Text('Drag a widget onto the canvas',style:TextStyle(fontSize:11,color:Colors.white38)),
+      const Spacer(),const Text('Drag a widget onto the canvas',style:TextStyle(fontSize:11,color:Palette.textFaint)),
     ]));
   Widget _hubTile(WidgetKind k)=>Container(padding:const EdgeInsets.all(12),
-    decoration:BoxDecoration(color:const Color(0xff1b2740),borderRadius:BorderRadius.circular(9)),
+    decoration:BoxDecoration(color:Palette.tile,borderRadius:BorderRadius.circular(9)),
     child:Row(children:[Icon(_kindIcon(k),size:17),const SizedBox(width:9),Text(_kindName(k))]));
   IconData _kindIcon(WidgetKind k)=>switch(k){WidgetKind.chart=>Icons.show_chart,WidgetKind.table=>Icons.table_chart,WidgetKind.script=>Icons.code};
   String _kindName(WidgetKind k)=>switch(k){WidgetKind.chart=>'Chart',WidgetKind.table=>'Table',WidgetKind.script=>'Script'};
@@ -120,8 +120,8 @@ class _LabHomeState extends State<LabHome> {
       },
       builder:(context,candidates,rejected)=>Container(
         margin:const EdgeInsets.all(12),padding:const EdgeInsets.all(10),
-        decoration:BoxDecoration(color:const Color(0xff0e1628),borderRadius:BorderRadius.circular(12),
-          border:Border.all(color:candidates.isNotEmpty?const Color(0xff8b7cff):const Color(0xff263149),width:1.2)),
+        decoration:BoxDecoration(color:Palette.canvas,borderRadius:BorderRadius.circular(12),
+          border:Border.all(color:candidates.isNotEmpty?Palette.accent:Palette.border,width:1.2)),
         child:AnimatedBuilder(animation:widget.workspace,builder:(context,_){
           final ws=widget.workspace;
           if(!ws.loaded) return const Center(child:CircularProgressIndicator());
@@ -147,9 +147,9 @@ class _LabHomeState extends State<LabHome> {
                 valueListenable:_shadow,
                 builder:(_,s,__)=>Stack(children:[
                   if(s!=null) Positioned(left:s.x*cellW,top:s.y*rowHeight,width:s.w*cellW-5,height:s.h*rowHeight-5,
-                    child:DecoratedBox(decoration:BoxDecoration(color:const Color(0x338b7cff),
+                    child:DecoratedBox(decoration:BoxDecoration(color:Palette.accentSoft,
                       borderRadius:BorderRadius.circular(10),
-                      border:Border.all(color:const Color(0xcc8b7cff),width:1.5)))),
+                      border:Border.all(color:Palette.accentStrong,width:1.5)))),
                 ])))),
             ])));
         }),
@@ -160,30 +160,30 @@ class _LabHomeState extends State<LabHome> {
     WidgetKind.values.map((k)=>ActionChip(label:Text('+ ${_kindName(k)}'),
       onPressed:widget.workspace.locked?null:()=>widget.workspace.add(k))).toList());
   Widget _emptyCanvas()=>Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    const Icon(Icons.dashboard_customize_outlined,size:36,color:Colors.white38),
+    const Icon(Icons.dashboard_customize_outlined,size:36,color:Palette.textFaint),
     const SizedBox(height:10),
-    const Text('No widgets on the canvas',style:TextStyle(color:Colors.white70)),
+    const Text('No widgets on the canvas',style:TextStyle(color:Palette.textSecondary)),
     const SizedBox(height:4),
-    const Text('Drag a widget from the hub, or add one:',style:TextStyle(fontSize:11,color:Colors.white38)),
+    const Text('Drag a widget from the hub, or add one:',style:TextStyle(fontSize:11,color:Palette.textFaint)),
     const SizedBox(height:12),
     _addChips(),
   ]));
   Widget _devPanel()=>Container(height:54,padding:const EdgeInsets.symmetric(horizontal:16),
-    decoration:const BoxDecoration(border:Border(top:BorderSide(color:Color(0xff263149)))),
+    decoration:const BoxDecoration(border:Border(top:BorderSide(color:Palette.border))),
     child:Row(children:[
-      const Icon(Icons.developer_mode,size:16,color:Colors.white54),const SizedBox(width:8),
-      const Text('DEV FEED',style:TextStyle(fontSize:10,fontWeight:FontWeight.bold,color:Colors.white54)),
+      const Icon(Icons.developer_mode,size:16,color:Palette.textMuted),const SizedBox(width:8),
+      const Text('DEV FEED',style:TextStyle(fontSize:10,fontWeight:FontWeight.bold,color:Palette.textMuted)),
       const SizedBox(width:12),
       TextButton(onPressed:()=>setState(()=>widget.market.configure(pause:!widget.market.paused)),
         child:Text(widget.market.paused?'Resume':'Pause')),
       TextButton(onPressed:()=>setState(()=>widget.market.configure(drop:!widget.market.dropped)),
         child:Text(widget.market.dropped?'Reconnect':'Drop feed')),
-      const Text('Seed',style:TextStyle(fontSize:11,color:Colors.white54)),const SizedBox(width:6),
+      const Text('Seed',style:TextStyle(fontSize:11,color:Palette.textMuted)),const SizedBox(width:6),
       SizedBox(width:70,child:TextField(controller:_seedCtrl,keyboardType:TextInputType.number,
         style:const TextStyle(fontSize:12),onSubmitted:(_)=>_applySeed(),
         decoration:const InputDecoration(isDense:true,border:OutlineInputBorder()))),
       TextButton(onPressed:_applySeed,child:const Text('Apply')),
-      const Spacer(),const Text('Rate',style:TextStyle(fontSize:11,color:Colors.white54)),
+      const Spacer(),const Text('Rate',style:TextStyle(fontSize:11,color:Palette.textMuted)),
       SizedBox(width:115,child:Slider(min:100,max:200,divisions:2,value:widget.market.intervalMs.toDouble(),
         onChanged:(v)=>setState(()=>widget.market.configure(rate:v.round())))),
       Text('${widget.market.intervalMs}ms',style:const TextStyle(fontSize:11)),

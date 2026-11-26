@@ -1,6 +1,6 @@
 {
-    "name": "tradl_widget_lab",
-    "short_name": "tradl_widget_lab",
+    "name": "Widget Lab",
+    "short_name": "Widget Lab",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

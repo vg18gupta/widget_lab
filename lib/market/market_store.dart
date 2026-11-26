@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
-import 'package:tradl_widget_lab/models/constants.dart';
-import 'package:tradl_widget_lab/models/tick.dart';
+import 'package:widget_lab/models/constants.dart';
+import 'package:widget_lab/models/tick.dart';
 
 class MarketStore {
   /// Longest chart window. Older ticks are dropped.

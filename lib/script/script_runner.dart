@@ -1,4 +1,4 @@
-import 'package:tradl_widget_lab/market/market_store.dart';
+import 'package:widget_lab/market/market_store.dart';
 
 /// A tunable setting declared in a script, e.g. `param threshold: 10 [0..100]`.
 class ScriptParam {

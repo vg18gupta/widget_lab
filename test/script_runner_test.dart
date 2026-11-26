@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tradl_widget_lab/market/market_store.dart';
-import 'package:tradl_widget_lab/script/script_runner.dart';
+import 'package:widget_lab/market/market_store.dart';
+import 'package:widget_lab/script/script_runner.dart';
 
 void main() {
   test('parseParams reads a declaration', () {

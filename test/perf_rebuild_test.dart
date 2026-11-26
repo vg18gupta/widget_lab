@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tradl_widget_lab/market/market_store.dart';
-import 'package:tradl_widget_lab/models/panel.dart';
-import 'package:tradl_widget_lab/state/workspace.dart';
-import 'package:tradl_widget_lab/ui/lab_home.dart';
-import 'package:tradl_widget_lab/ui/panel_card.dart';
+import 'package:widget_lab/market/market_store.dart';
+import 'package:widget_lab/models/panel.dart';
+import 'package:widget_lab/state/workspace.dart';
+import 'package:widget_lab/ui/lab_home.dart';
+import 'package:widget_lab/ui/panel_card.dart';
 
 void main() {
   testWidgets('with eight widgets, each feed tick rebuilds only the charts and tables, once each', (tester) async {

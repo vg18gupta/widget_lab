@@ -1,14 +1,15 @@
+import 'package:widget_lab/theme/palette.dart';
 import 'dart:async';
 import 'dart:math';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:tradl_widget_lab/market/market_store.dart';
-import 'package:tradl_widget_lab/models/constants.dart';
-import 'package:tradl_widget_lab/models/panel.dart';
-import 'package:tradl_widget_lab/models/tick.dart';
-import 'package:tradl_widget_lab/script/script_runner.dart';
-import 'package:tradl_widget_lab/state/workspace.dart';
+import 'package:widget_lab/market/market_store.dart';
+import 'package:widget_lab/models/constants.dart';
+import 'package:widget_lab/models/panel.dart';
+import 'package:widget_lab/models/tick.dart';
+import 'package:widget_lab/script/script_runner.dart';
+import 'package:widget_lab/state/workspace.dart';
 
 /// Build counts per part of the panel, for performance tests. Not used by the UI.
 @visibleForTesting
@@ -62,7 +63,7 @@ class _PanelCardState extends State<PanelCard> {
   @override Widget build(BuildContext context) {
     _count('card');
     final p=widget.panel;
-    return Material(color:const Color(0xff151f33),borderRadius:BorderRadius.circular(10),
+    return Material(color:Palette.surface,borderRadius:BorderRadius.circular(10),
       clipBehavior:Clip.antiAlias,child:Stack(fit:StackFit.expand,children:[
         Column(children:[
           GestureDetector(
@@ -72,7 +73,7 @@ class _PanelCardState extends State<PanelCard> {
             onPanCancel:widget.interactive?widget.workspace.endGesture:null,
             onDoubleTap:()=>widget.workspace.toggleFullscreen(p),
             child:Container(height:42,padding:const EdgeInsets.symmetric(horizontal:11),
-              decoration:const BoxDecoration(color:Color(0xff1c2942),border:Border(bottom:BorderSide(color:Color(0xff2b3852)))),
+              decoration:const BoxDecoration(color:Palette.header,border:Border(bottom:BorderSide(color:Palette.border))),
               child:Row(children:[
                 Icon(switch(p.kind){WidgetKind.chart=>Icons.show_chart,WidgetKind.table=>Icons.table_chart,WidgetKind.script=>Icons.code},size:16),
                 const SizedBox(width:7),Text(switch(p.kind){WidgetKind.chart=>'CHART',WidgetKind.table=>'TABLE',WidgetKind.script=>'SCRIPT'},
@@ -92,11 +93,11 @@ class _PanelCardState extends State<PanelCard> {
                 valueListenable:widget.workspace.channelSymbols[p.channel],
                 builder:(context,symbol,_) => _renderPanel(symbol))
             : _renderPanel(p.symbol)),
-          if(error!=null) Padding(padding:const EdgeInsets.all(4),child:Text(error!,style:const TextStyle(color:Colors.redAccent,fontSize:10))),
+          if(error!=null) Padding(padding:const EdgeInsets.all(4),child:Text(error!,style:const TextStyle(color:Palette.error,fontSize:10))),
         ]),
         if(widget.interactive) ..._resizeHandles(p),
         if(widget.interactive) const Positioned(right:3,bottom:3,
-          child:IgnorePointer(child:Icon(Icons.open_in_full,size:10,color:Colors.white38))),
+          child:IgnorePointer(child:Icon(Icons.open_in_full,size:10,color:Palette.textFaint))),
       ]));
   }
 
@@ -148,11 +149,11 @@ class _PanelCardState extends State<PanelCard> {
     });
   }
   Widget _state(String s,IconData i)=>Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    Icon(i,color:Colors.white38),const SizedBox(height:8),Text(s,style:const TextStyle(color:Colors.white54,fontSize:12)),
+    Icon(i,color:Palette.textFaint),const SizedBox(height:8),Text(s,style:const TextStyle(color:Palette.textMuted,fontSize:12)),
   ]));
   Widget _loading(String s)=>Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
     const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)),
-    const SizedBox(height:8),Text(s,style:const TextStyle(color:Colors.white54,fontSize:12)),
+    const SizedBox(height:8),Text(s,style:const TextStyle(color:Palette.textMuted,fontSize:12)),
   ]));
 
   // ---- Chart ---------------------------------------------------------------
@@ -165,7 +166,7 @@ class _PanelCardState extends State<PanelCard> {
             style:TextButton.styleFrom(padding:const EdgeInsets.symmetric(horizontal:6),
               minimumSize:Size.zero,tapTargetSize:MaterialTapTargetSize.shrinkWrap),
             onPressed:()=>setState(()=>widget.panel.range=r),
-            child:Text(r,style:TextStyle(fontSize:11,color:widget.panel.range==r?const Color(0xffa99cff):Colors.white54))) ]),
+            child:Text(r,style:TextStyle(fontSize:11,color:widget.panel.range==r?Palette.accent:Palette.textMuted))) ]),
         Expanded(child:ValueListenableBuilder<Tick>(valueListenable:widget.market.listen(symbol),
           builder:(context,tick,_)=>_guard(()=>_chartBody(symbol)))),
       ]));
@@ -189,11 +190,11 @@ class _PanelCardState extends State<PanelCard> {
         bottomTitles:AxisTitles(sideTitles:SideTitles(showTitles:true,reservedSize:18,interval:span/4,
           getTitlesWidget:(v,meta)=>Padding(padding:const EdgeInsets.only(top:4),
             child:Text(_clock(start.add(Duration(milliseconds:(v*1000).round()))),
-              style:const TextStyle(fontSize:9,color:Colors.white38))))),
+              style:const TextStyle(fontSize:9,color:Palette.textFaint))))),
       ),
       borderData:FlBorderData(show:false),
       lineBarsData:[LineChartBarData(spots:spots,isCurved:true,barWidth:2,dotData:const FlDotData(show:false),
-        color:const Color(0xff9c8cff),belowBarData:BarAreaData(show:true,color:const Color(0x229c8cff)))],
+        color:Palette.accent,belowBarData:BarAreaData(show:true,color:Palette.accentFill))],
     ), duration:Duration.zero); // no tween per tick: the new points appear immediately
   }
 
@@ -207,7 +208,7 @@ class _PanelCardState extends State<PanelCard> {
   /// Symbol dropdown. Changing it goes through the workspace, so linked widgets follow.
   Widget _symbolPicker(String value)=>DropdownButton<String>(
     value:value,isDense:true,underline:const SizedBox(),
-    style:const TextStyle(fontWeight:FontWeight.bold,fontSize:13,color:Colors.white),
+    style:const TextStyle(fontWeight:FontWeight.bold,fontSize:13,color:Palette.textPrimary),
     items:[for(final s in symbols) DropdownMenuItem(value:s,child:Text(s))],
     onChanged:(v){if(v!=null)widget.workspace.selectSymbol(widget.panel,v);});
   Widget _tableBody() {
@@ -231,12 +232,12 @@ class _PanelCardState extends State<PanelCard> {
         _tableHeader(),
         for(final r in rows.take(visible)) _tableRow(r),
         if(hidden>0) SizedBox(height:_tableRowHeight,child:Center(child:Text('+$hidden more',
-          style:const TextStyle(fontSize:10,color:Colors.white38)))),
+          style:const TextStyle(fontSize:10,color:Palette.textFaint)))),
       ]);
     });
   }
   Widget _tableHeader()=>Container(height:_tableRowHeight,
-    decoration:const BoxDecoration(border:Border(bottom:BorderSide(color:Color(0xff2b3852)))),
+    decoration:const BoxDecoration(border:Border(bottom:BorderSide(color:Palette.border))),
     child:Row(children:[
       for(final (key,label) in const [('symbol','SYMBOL'),('last','LAST'),('change','CHANGE'),('pct','PCT')])
         Expanded(child:InkWell(
@@ -247,14 +248,14 @@ class _PanelCardState extends State<PanelCard> {
           child:Padding(padding:const EdgeInsets.symmetric(horizontal:6),child:Align(alignment:Alignment.centerLeft,
             child:Text(widget.panel.sortBy==key?'$label ${widget.panel.ascending?'▲':'▼'}':label,
               overflow:TextOverflow.ellipsis,
-              style:const TextStyle(fontSize:10,fontWeight:FontWeight.bold,color:Colors.white54)))))),
+              style:const TextStyle(fontSize:10,fontWeight:FontWeight.bold,color:Palette.textMuted)))))),
     ]));
   Widget _tableRow(Map<String,Object> r) {
     final selected=widget.panel.symbol==r['symbol'];
     final change=r['change'] as double;
     return InkWell(
       onTap:()=>widget.workspace.selectSymbol(widget.panel,r['symbol'] as String),
-      child:Container(height:_tableRowHeight,color:selected?const Color(0x338b7cff):null,
+      child:Container(height:_tableRowHeight,color:selected?Palette.accentSoft:null,
         child:Row(children:[
           _cell('${r['symbol']}'),
           _cell((r['last'] as double).toStringAsFixed(2)),
@@ -283,13 +284,13 @@ class _PanelCardState extends State<PanelCard> {
     final result=_scriptResult;
     if(result==null) return const Padding(
       padding:EdgeInsets.all(10),
-      child:Text('Run the script to see its output.',style:TextStyle(color:Colors.white38,fontSize:11)));
+      child:Text('Run the script to see its output.',style:TextStyle(color:Palette.textFaint,fontSize:11)));
     if(result['type']=='stat') return Card(
-      color:const Color(0xff202d48),
+      color:Palette.cardTint,
       child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Text('${result['label']}',style:const TextStyle(color:Colors.white54,fontSize:11)),
+        Text('${result['label']}',style:const TextStyle(color:Palette.textMuted,fontSize:11)),
         const SizedBox(height:5),Text('${result['value']}',style:const TextStyle(fontSize:23,fontWeight:FontWeight.bold)),
-        const Text('Stat tile output',style:TextStyle(color:Colors.white38,fontSize:10)),
+        const Text('Stat tile output',style:TextStyle(color:Palette.textFaint,fontSize:10)),
       ])));
     final rows=result['rows'] as List;
     return DataTable(columns:const [DataColumn(label:Text('SYMBOL')),DataColumn(label:Text('VALUE'))],
@@ -300,12 +301,12 @@ class _PanelCardState extends State<PanelCard> {
     final declared=parseParams(widget.panel.code);
     if(declared.isEmpty) return const Padding(padding:EdgeInsets.fromLTRB(12,4,12,8),
       child:Text('Add "param name: 10 [0..100]" to the script to create a setting.',
-        style:TextStyle(color:Colors.white38,fontSize:10)));
+        style:TextStyle(color:Palette.textFaint,fontSize:10)));
     final values=_paramValues();
     return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       for(final p in declared) Padding(padding:const EdgeInsets.symmetric(horizontal:12),child:Row(children:[
         SizedBox(width:72,child:Text(p.name,overflow:TextOverflow.ellipsis,
-          style:const TextStyle(fontSize:10,color:Colors.white54))),
+          style:const TextStyle(fontSize:10,color:Palette.textMuted))),
         Expanded(child:Slider(min:p.min,max:p.max,
           value:(values[p.name] ?? p.defaultValue).clamp(p.min,p.max).toDouble(),
           onChanged:(v){widget.workspace.setParam(widget.panel,p.name,v);_run();})),
@@ -317,11 +318,11 @@ class _PanelCardState extends State<PanelCard> {
   Widget _consoleView()=>Container(
     margin:const EdgeInsets.fromLTRB(10,4,10,8),padding:const EdgeInsets.all(6),
     constraints:const BoxConstraints(maxHeight:90),
-    decoration:BoxDecoration(color:const Color(0xff0b1020),borderRadius:BorderRadius.circular(6)),
+    decoration:BoxDecoration(color:Palette.console,borderRadius:BorderRadius.circular(6)),
     child:_console.isEmpty
-      ? const Text('Console is empty.',style:TextStyle(color:Colors.white38,fontSize:10))
+      ? const Text('Console is empty.',style:TextStyle(color:Palette.textFaint,fontSize:10))
       : SingleChildScrollView(reverse:true,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          for(final line in _console) Text(line,style:const TextStyle(fontFamily:'monospace',fontSize:10,color:Colors.white70)),
+          for(final line in _console) Text(line,style:const TextStyle(fontFamily:'monospace',fontSize:10,color:Palette.textSecondary)),
         ])));
   Widget _script()=>Column(children:[
     Expanded(flex:3,child:Padding(padding:const EdgeInsets.all(8),child:TextField(
@@ -337,7 +338,7 @@ class _PanelCardState extends State<PanelCard> {
       spacing:10,children:[
       FilledButton.tonal(onPressed:_run,child:const Text('Run script')),
       _symbolPicker(widget.panel.symbol),
-      const Text('Autosaved locally',style:TextStyle(fontSize:10,color:Colors.white38)),
+      const Text('Autosaved locally',style:TextStyle(fontSize:10,color:Palette.textFaint)),
     ])),
     Expanded(flex:2,child:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       _scriptOutput(),

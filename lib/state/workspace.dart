@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tradl_widget_lab/market/market_store.dart';
-import 'package:tradl_widget_lab/models/constants.dart';
-import 'package:tradl_widget_lab/models/panel.dart';
+import 'package:widget_lab/market/market_store.dart';
+import 'package:widget_lab/models/constants.dart';
+import 'package:widget_lab/models/panel.dart';
 
 /// The edges of a widget that a resize gesture moves. Corners use two sides.
 enum ResizeSide { left, right, top, bottom }
@@ -23,7 +23,7 @@ class Workspace extends ChangeNotifier {
   /// When locked, every layout change is refused. Channels, symbols and full screen still work.
   bool get locked => _locked;
   void setLocked(bool value) { _locked = value; _changed(); }
-  static const _key = 'tradl_widget_lab_layout_v1';
+  static const _key = 'widget_lab_layout_v1';
   static const _columns = 12;
 
   Future<void> load() async {
