@@ -1,4 +1,5 @@
 import 'package:widget_lab/controller/app_controllers.dart';
+import 'support/cells.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:widget_lab/store/market_store.dart';
@@ -71,25 +72,25 @@ void main() {
     final table = _byId(ws, 'default-table');
     ws.layout.beginGesture(table);
     ws.layout.resizeBy(table, {ResizeSide.right, ResizeSide.bottom}, -50, -50);
-    expect(table.w, WidgetKind.table.minW);
-    expect(table.h, WidgetKind.table.minH);
+    expect(cellOf(ws, table).w, WidgetKind.table.minW);
+    expect(cellOf(ws, table).h, WidgetKind.table.minH);
     ws.layout.endGesture();
 
     final script = _byId(ws, 'default-script');
     ws.layout.beginGesture(script);
     ws.layout.resizeBy(script, {ResizeSide.right, ResizeSide.bottom}, -50, -50);
-    expect(script.w, WidgetKind.script.minW);
-    expect(script.h, WidgetKind.script.minH);
+    expect(cellOf(ws, script).w, WidgetKind.script.minW);
+    expect(cellOf(ws, script).h, WidgetKind.script.minH);
     ws.layout.endGesture();
   });
 
   test('a left-edge resize keeps the right edge fixed', () {
     final chart = _byId(ws, 'default-chart'); // x0, right edge at chart.w
-    final rightEdge = chart.x + chart.w;
+    final rightEdge = rectOf(chart).x + rectOf(chart).w;
     ws.layout.beginGesture(chart);
     ws.layout.resizeBy(chart, {ResizeSide.left}, 1, 0); // one cell in
-    expect(chart.x, 1);
-    expect(chart.x + chart.w, rightEdge);
+    expect(cellOf(ws, chart).x, 1);
+    expect(cellOf(ws, chart).x + cellOf(ws, chart).w, rightEdge);
     ws.layout.endGesture();
   });
 
@@ -97,8 +98,8 @@ void main() {
     final chart = _byId(ws, 'default-chart'); // y0 h7, bottom edge at 7
     ws.layout.beginGesture(chart);
     ws.layout.resizeBy(chart, {ResizeSide.top}, 0, 1); // one row down
-    expect(chart.y, 1);
-    expect(chart.y + chart.h, 7);
+    expect(cellOf(ws, chart).y, 1);
+    expect(cellOf(ws, chart).y + cellOf(ws, chart).h, 7);
     ws.layout.endGesture();
   });
 }

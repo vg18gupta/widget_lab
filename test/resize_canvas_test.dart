@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:widget_lab/app.dart';
+import 'package:widget_lab/presentation/panel_card.dart';
 import 'package:widget_lab/store/market_store.dart';
 import 'package:widget_lab/store/workspace_store.dart';
 import 'package:widget_lab/presentation/lab_home.dart';
@@ -21,7 +22,7 @@ void main() {
     await tester.pump();
 
     final chart = ws.store.panels.firstWhere((p) => p.id == 'default-chart');
-    final finder = find.byKey(const ValueKey('default-chart'));
+    final finder = find.byWidgetPredicate((w) => w is PanelCard && w.key == const ValueKey('default-chart'));
     Future<void> mouseDrag(Offset from, Offset by) async {
       final g = await tester.startGesture(from, kind: PointerDeviceKind.mouse);
       await g.moveBy(by);
@@ -37,17 +38,17 @@ void main() {
     }
 
     var rect = tester.getRect(finder);
-    await mouseDrag(Offset(rect.right - 3, rect.bottom - 3), const Offset(60, 0));
+    await mouseDrag(Offset(rect.right - 3, rect.bottom - 3), const Offset(90, 0));
     expect(chart.w, greaterThan(w0), reason: 'bottom-right corner');
     await reset();
 
     rect = tester.getRect(finder);
-    await mouseDrag(Offset(rect.right - 3, rect.center.dy), const Offset(60, 0));
+    await mouseDrag(Offset(rect.right - 3, rect.center.dy), const Offset(90, 0));
     expect(chart.w, greaterThan(w0), reason: 'right edge');
     await reset();
 
     rect = tester.getRect(finder);
-    await mouseDrag(Offset(rect.left + 3, rect.center.dy), const Offset(60, 0));
+    await mouseDrag(Offset(rect.left + 3, rect.center.dy), const Offset(90, 0));
     expect(chart.x, greaterThan(0), reason: 'left edge');
     await reset();
 

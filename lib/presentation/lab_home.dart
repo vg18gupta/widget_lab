@@ -4,9 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:widget_lab/config/constants.dart';
 import 'package:widget_lab/controller/app_controllers.dart';
 import 'package:widget_lab/domain/grid_layout.dart';
+import 'package:widget_lab/domain/grid_layout.dart';
 import 'package:widget_lab/domain/panel.dart';
 import 'package:widget_lab/presentation/grid_painter.dart';
 import 'package:widget_lab/presentation/panel_card.dart';
+import 'package:widget_lab/store/gesture_preview.dart';
 import 'package:widget_lab/theme/palette.dart';
 
 /// The whole screen: top bar, widget hub, canvas and dev strip. It draws the layout held by
@@ -127,7 +129,7 @@ class _LabHomeState extends State<LabHome> {
         margin:const EdgeInsets.all(12),padding:const EdgeInsets.all(10),
         decoration:BoxDecoration(color:Palette.canvas,borderRadius:BorderRadius.circular(12),
           border:Border.all(color:candidates.isNotEmpty?Palette.accent:Palette.border,width:1.2)),
-        child:AnimatedBuilder(animation:widget.app.store,builder:(context,_){
+        child:AnimatedBuilder(animation:Listenable.merge([widget.app.store,widget.app.store.preview]),builder:(context,_){
           final store=widget.app.store;
           if(!store.loaded) return const Center(child:CircularProgressIndicator());
           final full=store.fullscreenPanel;
@@ -140,14 +142,17 @@ class _LabHomeState extends State<LabHome> {
               child:SizedBox(height:330,child:PanelCard(panel:p,app:widget.app,
                 cellW:0,interactive:false)))
           ]);
-          final maxY=store.panels.fold<int>(12,(v,p)=>max(v,p.y+p.h+1));
+          final preview=store.preview.value;
+          _cards.removeWhere((id,_)=>!store.panels.any((p)=>p.id==id));
+          var maxY=12;
+          for(final p in store.panels){
+            final r=_displayCells(p,preview);
+            maxY=max(maxY,(r.y+r.h).ceil()+1);
+          }
           return SingleChildScrollView(child:SizedBox(key:_gridKey,height:maxY*rowHeight,width:double.infinity,
             child:Stack(children:[
               Positioned.fill(child:CustomPaint(painter:GridPainter(cellW))),
-              for(final p in store.panels)
-                Positioned(left:p.x*cellW,top:p.y*rowHeight,width:p.w*cellW-5,height:p.h*rowHeight-5,
-                  child:PanelCard(key:ValueKey(p.id),panel:p,app:widget.app,
-                    cellW:cellW,interactive:!store.locked)),
+              for(final p in store.panels) _positioned(p,preview,cellW,!store.locked),
               Positioned.fill(child:IgnorePointer(child:ValueListenableBuilder<Panel?>(
                 valueListenable:_shadow,
                 builder:(_,s,__)=>Stack(children:[
@@ -160,6 +165,44 @@ class _LabHomeState extends State<LabHome> {
         }),
       ),
     );
+  }
+
+  // ---- Canvas helpers ----------------------------------------------------------
+  /// Cards kept between frames, keyed by panel id.
+  final Map<String,_CachedCard> _cards = {};
+
+  /// Where a panel is drawn: following the pointer while it is being dragged or resized,
+  /// its settled cell while it moves aside for another panel, or its committed cell.
+  LiveRect _displayCells(Panel p,GesturePreview? preview){
+    if(preview==null) return liveRectOf(rectOf(p));
+    if(preview.panelId==p.id) return preview.live;
+    final c=preview.cells[p.id];
+    return c==null?liveRectOf(rectOf(p)):liveRectOf(c);
+  }
+
+  /// A card is reused between frames unless what it shows has changed, so a pointer move
+  /// doesn't rebuild the chart or table inside it.
+  Widget _cardFor(Panel p,double cellW,bool interactive){
+    final dropped=widget.app.market.dropped;
+    final c=_cards[p.id];
+    if(c!=null&&identical(c.panel,p)&&c.cellW==cellW&&c.interactive==interactive&&c.dropped==dropped){
+      return c.widget;
+    }
+    final w=PanelCard(key:ValueKey(p.id),panel:p,app:widget.app,cellW:cellW,interactive:interactive);
+    _cards[p.id]=_CachedCard(p,cellW,interactive,dropped,w);
+    return w;
+  }
+
+  /// One panel on the canvas. While it is under the pointer it follows the pointer exactly;
+  /// otherwise it glides to where it belongs.
+  Widget _positioned(Panel p,GesturePreview? preview,double cellW,bool interactive){
+    final r=_displayCells(p,preview);
+    final dragging=preview?.panelId==p.id;
+    return AnimatedPositioned(key:ValueKey(p.id),
+      duration:dragging?Duration.zero:const Duration(milliseconds:180),
+      curve:Curves.easeOutCubic,
+      left:r.x*cellW,top:r.y*rowHeight,width:r.w*cellW-5,height:r.h*rowHeight-5,
+      child:_cardFor(p,cellW,interactive));
   }
 
   Widget _addChips()=>Wrap(spacing:8,runSpacing:8,children:
@@ -198,3 +241,12 @@ class _LabHomeState extends State<LabHome> {
 }
 
 class UndoIntent extends Intent { const UndoIntent(); }
+
+class _CachedCard {
+  _CachedCard(this.panel,this.cellW,this.interactive,this.dropped,this.widget);
+  final Panel panel;
+  final double cellW;
+  final bool interactive;
+  final bool dropped;
+  final PanelCard widget;
+}

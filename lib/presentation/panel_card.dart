@@ -73,10 +73,13 @@ class _PanelCardState extends State<PanelCard> {
   Panel get _panel => widget.panel;
   LayoutController get _layout => widget.app.layout;
 
-  /// Pixel offsets become whole cells here, not in the store. Each is measured from the
-  /// gesture's start, so the rounding never accumulates.
-  int _cols(double px) => (px / widget.cellW).round();
-  int _rows(double px) => (px / rowHeight).round();
+  // Pointer offsets are measured from where the press began, in global coordinates, so the
+  // distance travelled before a drag is recognised isn't lost. They are converted to
+  // fractional cells here; the layout rounds them, with hysteresis.
+  Offset _downAt = Offset.zero;
+  void _moveTo(Offset global) => _gestureTotal = global - _downAt;
+  double _colsOf(Offset o) => o.dx / widget.cellW;
+  double _rowsOf(Offset o) => o.dy / rowHeight;
 
   void _startGesture() {
     _gestureTotal = Offset.zero;
@@ -87,7 +90,13 @@ class _PanelCardState extends State<PanelCard> {
     if (_console.length > 50) _console.removeAt(0);
   }
 
-  @override Widget build(BuildContext context) {
+  // The card listens to the store itself, so the canvas can reuse a card instance while only
+  // the store changes around it.
+  @override Widget build(BuildContext context) => ListenableBuilder(
+    listenable: widget.app.store,
+    builder: (_, __) => _card());
+
+  Widget _card() {
     _count('card');
     final p=_panel;
     final store=widget.app.store;
@@ -95,8 +104,9 @@ class _PanelCardState extends State<PanelCard> {
       clipBehavior:Clip.antiAlias,child:Stack(fit:StackFit.expand,children:[
         Column(children:[
           GestureDetector(
+            onPanDown:widget.interactive?(d){_downAt=d.globalPosition;}:null,
             onPanStart:widget.interactive?(_)=>_startGesture():null,
-            onPanUpdate:widget.interactive?(d){_gestureTotal+=d.delta;_layout.dragBy(p,_cols(_gestureTotal.dx),_rows(_gestureTotal.dy));}:null,
+            onPanUpdate:widget.interactive?(d){_moveTo(d.globalPosition);_layout.dragBy(p,_colsOf(_gestureTotal),_rowsOf(_gestureTotal));}:null,
             onPanEnd:widget.interactive?(_)=>_layout.endGesture():null,
             onPanCancel:widget.interactive?_layout.endGesture:null,
             onDoubleTap:()=>_layout.toggleFullscreen(p),
@@ -137,10 +147,11 @@ class _PanelCardState extends State<PanelCard> {
       Positioned(left:left,right:right,top:top,bottom:bottom,width:width,height:height,
         child:MouseRegion(cursor:cursor,child:GestureDetector(
           behavior:HitTestBehavior.translucent,
+          onPanDown:(d){_downAt=d.globalPosition;},
           onPanStart:(_)=>_startGesture(),
           onPanUpdate:(d){
-            _gestureTotal+=d.delta;
-            _layout.resizeBy(p,sides,_cols(_gestureTotal.dx),_rows(_gestureTotal.dy));
+            _moveTo(d.globalPosition);
+            _layout.resizeBy(p,sides,_colsOf(_gestureTotal),_rowsOf(_gestureTotal));
           },
           onPanEnd:(_)=>_layout.endGesture(),
           onPanCancel:_layout.endGesture,

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:widget_lab/domain/panel.dart';
+import 'package:widget_lab/store/gesture_preview.dart';
 
 /// The layout's state: panels, channel symbols, the lock and the undo history. It holds
 /// data and notifies listeners. Controllers make the changes, and nothing here touches
@@ -12,6 +13,10 @@ class WorkspaceStore extends ChangeNotifier {
   bool loaded = false;
   /// When true, controllers refuse layout changes.
   bool locked = false;
+
+  /// The drag or resize in progress, or null. Kept apart from [panels] so that moving the
+  /// pointer doesn't rebuild the layout.
+  final ValueNotifier<GesturePreview?> preview = ValueNotifier<GesturePreview?>(null);
 
   final List<List<Map<String, dynamic>>> _undo = [];
   static const _undoLimit = 30;
@@ -42,6 +47,7 @@ class WorkspaceStore extends ChangeNotifier {
     for (final c in channelSymbols) {
       c.dispose();
     }
+    preview.dispose();
     super.dispose();
   }
 }
