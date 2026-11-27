@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:widget_lab/controller/layout_persistence.dart';
 import 'package:widget_lab/domain/grid_layout.dart';
 import 'package:widget_lab/domain/panel.dart';
+import 'package:widget_lab/store/gesture_preview.dart';
 import 'package:widget_lab/store/workspace_store.dart';
 
 /// Every change to the grid: add, move, resize, remove, duplicate, undo, reset and the lock.
@@ -78,57 +79,72 @@ class LayoutController {
   }
 
   // ---- Drag and resize gestures ----------------------------------------------
-  // Each update lays out the grid again from the gesture's start, so the result depends
-  // only on the offset now. The layout is snapshotted once (on the first real change, so
-  // undo reverts a whole gesture) and saved on release.
+  // While the pointer is down the layout doesn't change. The controller works out where
+  // everything would land and publishes it as a GesturePreview for the canvas. Releasing
+  // the pointer commits that result as one undoable change.
   Panel? _gesturePanel;
-  Map<String, CellRect> _origins = {};
-  bool _gestureSnapshotted = false;
+  CellRect _origin = (x: 0, y: 0, w: 0, h: 0);
+  CellRect _snapped = (x: 0, y: 0, w: 0, h: 0);
+  Map<String, CellRect> _cells = {};
 
   void beginGesture(Panel p) {
     if (store.locked) return;
     _gesturePanel = p;
-    _origins = {for (final q in store.panels) q.id: rectOf(q)};
-    _gestureSnapshotted = false;
+    _origin = rectOf(p);
+    _snapped = _origin;
+    _cells = {for (final q in store.panels) q.id: rectOf(q)};
+    store.preview.value = GesturePreview(panelId: p.id, live: liveRectOf(_origin), cells: _cells);
   }
 
   /// Moves the gesture's panel by [dCols] and [dRows] cells from where the gesture began.
-  void dragBy(Panel p, int dCols, int dRows) {
+  void dragBy(Panel p, double dCols, double dRows) {
     if (!identical(p, _gesturePanel)) return;
-    final o = _origins[p.id]!;
-    final t = dragTarget(o, dCols, dRows);
-    _relayout(p, t.x, t.y, o.w, o.h);
+    _update(p, liveDragRect(_origin, dCols, dRows));
   }
 
   /// Resizes the gesture's panel by [dCols] and [dRows] cells on the given [sides].
-  void resizeBy(Panel p, Set<ResizeSide> sides, int dCols, int dRows) {
+  void resizeBy(Panel p, Set<ResizeSide> sides, double dCols, double dRows) {
     if (!identical(p, _gesturePanel)) return;
-    final o = _origins[p.id]!;
-    final r = resizeTarget(o, p.kind, sides, dCols, dRows);
-    _relayout(p, r.x, r.y, r.w, r.h);
+    _update(p, liveResizeRect(_origin, p.kind, sides, dCols, dRows));
   }
 
+  /// Ends the gesture. If anything moved, the result becomes one undoable change.
   void endGesture() {
-    if (_gestureSnapshotted) _changed();
+    final p = _gesturePanel;
+    if (p == null) return;
+    final moved = _snapped != _origin;
+    if (moved) {
+      _snapshot();
+      for (final q in store.panels) {
+        final c = _cells[q.id];
+        if (c != null) {
+          q.x = c.x; q.y = c.y; q.w = c.w; q.h = c.h;
+        }
+      }
+    }
     _gesturePanel = null;
-    _origins = {};
-    _gestureSnapshotted = false;
+    _cells = {};
+    store.preview.value = null;
+    if (moved) _changed();
   }
 
-  void _relayout(Panel moving, int x, int y, int w, int h) {
-    if (moving.x == x && moving.y == y && moving.w == w && moving.h == h) return;
-    if (!_gestureSnapshotted) {
-      // Nothing has changed yet in this gesture, so the current layout is the original.
-      _snapshot();
-      _gestureSnapshotted = true;
+  void _update(Panel p, LiveRect live) {
+    final snapped = snapRect(live, _snapped);
+    if (snapped != _snapped) {
+      _snapped = snapped;
+      _cells = _settledWith(p, snapped);
     }
-    for (final q in store.panels) {
-      final o = _origins[q.id]!;
-      q.x = o.x; q.y = o.y; q.w = o.w; q.h = o.h;
-    }
-    moving.x = x; moving.y = y; moving.w = w; moving.h = h;
-    settle(store.panels, moving);
-    store.notifyChanged();
+    store.preview.value = GesturePreview(panelId: p.id, live: live, cells: _cells);
+  }
+
+  /// Where every panel would be if [moving] sat at [target]. Works on copies, so the
+  /// committed layout is untouched until release.
+  Map<String, CellRect> _settledWith(Panel moving, CellRect target) {
+    final copies = [for (final q in store.panels) q.copy()];
+    final m = copies.firstWhere((c) => c.id == moving.id);
+    m.x = target.x; m.y = target.y; m.w = target.w; m.h = target.h;
+    settle(copies, m);
+    return {for (final c in copies) c.id: rectOf(c)};
   }
 
   // ---- Full screen, undo, reset ------------------------------------------------

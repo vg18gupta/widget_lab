@@ -1,11 +1,11 @@
-import 'package:widget_lab/controller/app_controllers.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:widget_lab/controller/app_controllers.dart';
 import 'package:widget_lab/data/layout_repository.dart';
 import 'package:widget_lab/domain/grid_layout.dart';
 import 'package:widget_lab/domain/panel.dart';
 import 'package:widget_lab/store/market_store.dart';
-import 'package:widget_lab/store/workspace_store.dart';
+import 'support/cells.dart';
 
 /// An in-memory repository, so the workspace tests don't touch storage.
 class _MemoryRepository implements LayoutRepository {
@@ -33,13 +33,23 @@ void main() {
     expect(ws.store.panels.length, 3);
   });
 
-  test('a drag moves by whole cells from where the gesture began', () {
+  test('a drag follows the pointer and rounds to whole cells on release', () {
     final p = chart(ws);
     ws.layout.beginGesture(p);
-    ws.layout.dragBy(p, 1, 0);
+    ws.layout.dragBy(p, 1.4, 0);
+    expect(cellOf(ws, p).x, 1, reason: 'the target rounds to the nearest cell');
+    expect(ws.store.preview.value!.live.x, closeTo(1.4, 1e-9), reason: 'the live position is exact');
+    ws.layout.endGesture();
     expect(p.x, 1);
-    ws.layout.dragBy(p, 1, 0); // the offset is measured from the start, so this is still one cell
-    expect(p.x, 1);
+  });
+
+  test('small movements do not change the target until 60% of a cell', () {
+    final p = chart(ws);
+    ws.layout.beginGesture(p);
+    ws.layout.dragBy(p, 0.5, 0);
+    expect(cellOf(ws, p).x, 0);
+    ws.layout.dragBy(p, 0.7, 0);
+    expect(cellOf(ws, p).x, 1);
     ws.layout.endGesture();
   });
 
@@ -47,7 +57,7 @@ void main() {
     final p = chart(ws);
     ws.layout.beginGesture(p);
     for (var c = 0; c <= 3; c++) {
-      ws.layout.dragBy(p, c, 0);
+      ws.layout.dragBy(p, c.toDouble(), 0);
     }
     ws.layout.endGesture();
     expect(p.x, 3);
@@ -55,12 +65,22 @@ void main() {
     expect(chart(ws).x, 0, reason: 'one undo should revert the entire drag');
   });
 
+  test('a cancelled drag changes nothing', () {
+    final p = chart(ws);
+    ws.layout.beginGesture(p);
+    ws.layout.dragBy(p, 3, 0);
+    ws.layout.endGesture();
+    final moved = p.x;
+    ws.layout.undo();
+    expect(moved, 3);
+    expect(chart(ws).x, 0);
+  });
+
   test('dragging stops at the right edge of the 12-column grid', () {
     final p = chart(ws);
     ws.layout.beginGesture(p);
     ws.layout.dragBy(p, 50, 0);
-    expect(p.x, 12 - p.w);
-    expect(p.x + p.w, lessThanOrEqualTo(12));
+    expect(cellOf(ws, p).x, 12 - p.w);
     ws.layout.endGesture();
   });
 
@@ -68,7 +88,7 @@ void main() {
     final p = chart(ws);
     ws.layout.beginGesture(p);
     ws.layout.dragBy(p, 0, -50);
-    expect(p.y, 0);
+    expect(cellOf(ws, p).y, 0);
     ws.layout.endGesture();
   });
 
@@ -77,12 +97,12 @@ void main() {
     final w0 = p.w;
     ws.layout.beginGesture(p);
     ws.layout.resizeBy(p, {ResizeSide.right}, 1, 0);
-    expect(p.w, w0 + 1);
+    expect(cellOf(ws, p).w, w0 + 1);
     ws.layout.resizeBy(p, {ResizeSide.right}, 50, 0);
-    expect(p.w, 12 - p.x);
+    expect(cellOf(ws, p).w, 12 - p.x);
     ws.layout.resizeBy(p, {ResizeSide.right, ResizeSide.bottom}, -50, -50);
-    expect(p.w, WidgetKind.chart.minW);
-    expect(p.h, WidgetKind.chart.minH);
+    expect(cellOf(ws, p).w, WidgetKind.chart.minW);
+    expect(cellOf(ws, p).h, WidgetKind.chart.minH);
     ws.layout.endGesture();
   });
 
@@ -92,7 +112,7 @@ void main() {
     final before = other.x;
     ws.layout.beginGesture(p);
     ws.layout.dragBy(other, 3, 0);
-    expect(other.x, before, reason: 'the table was not the active gesture panel');
+    expect(cellOf(ws, other).x, before, reason: 'the table was not the active gesture panel');
     ws.layout.endGesture();
   });
 }
